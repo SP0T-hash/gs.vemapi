@@ -8,7 +8,7 @@ import { KpiCardWidget, KpiCardSkeleton } from '@/components/dashboard/KpiCardWi
 import { SalesAreaChart, SalesChartSkeleton } from '@/components/charts/SalesAreaChart';
 import { OrderStatusPieChart } from '@/components/charts/OrderStatusPieChart';
 import { PartnerRankingChart } from '@/components/charts/PartnerRankingChart';
-import type { DashboardFilter } from '@/types/dashboard.types';
+import type { DashboardFilter, RevenueByProduct } from '@/types/dashboard.types';
 import { buildDateRange } from '@/types/dashboard.types';
 import {
   DollarSign, TrendingUp, CreditCard, CheckCircle2,
@@ -214,7 +214,7 @@ export default function DashboardPage() {
             subtitle="Receita e volume por tipo de certificado"
           >
             <div className="space-y-2">
-              {charts.revenueByProduct.map((product, i) => {
+              {charts.revenueByProduct.map((product: RevenueByProduct, i: number) => {
                 const maxRevenue = charts.revenueByProduct[0].revenue;
                 const pct = Math.round((product.revenue / maxRevenue) * 100);
                 return (

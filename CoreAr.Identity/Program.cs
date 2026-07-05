@@ -1,4 +1,5 @@
 using CoreAr.Identity.Domain.Constants;
+using CoreAr.Identity.Infrastructure.Middlewares;
 using Microsoft.AspNetCore.Identity;
 using CoreAr.Identity.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -47,6 +48,10 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// Middleware global de exceções
+app.UseGlobalExceptionMiddleware();
+
 app.UseRateLimiter();         // Deve vir antes de UseAuthentication
 app.UseAuthentication();      // 1. Valida o JWT
 app.UseAuthorization();       // 2. Verifica as Roles/Policies após autenticação

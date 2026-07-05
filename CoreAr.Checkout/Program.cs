@@ -1,5 +1,6 @@
 using CoreAr.Checkout.Application.Behaviors;
 using CoreAr.Checkout.Api.Controllers;
+using CoreAr.Checkout.Api.Middlewares;
 using CoreAr.Checkout.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -121,6 +122,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// Middleware global de exceções (DEVE ser o primeiro middleware)
+app.UseGlobalExceptionMiddleware();
 
 // Middleware de Idempotência ANTES dos controllers
 // Intercepta webhooks duplicados antes de qualquer processamento
