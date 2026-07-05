@@ -18,6 +18,8 @@ import {
   RefreshCw,
   AlertTriangle,
   HardDrive,
+  Calendar,
+  DollarSign,
 } from 'lucide-react';
 import { checkSession, logoutGS, getCurrentUser, type GS_UserSession } from '@/lib/gs/auth';
 import { USER_LEVEL_LABELS, USER_LEVEL_COLORS } from '@/types/gs/permissions';
@@ -86,6 +88,18 @@ export default function GSLayout({ children }: { children: React.ReactNode }) {
             icon={<LayoutDashboard size={20} />}
             label="Dashboard"
             active={pathname === '/gs'}
+          />
+          <NavItem
+            href="/gs/agenda"
+            icon={<Calendar size={20} />}
+            label="Agenda"
+            active={pathname.startsWith('/gs/agenda') && !pathname.startsWith('/gs/agenda/comissoes')}
+          />
+          <NavItem
+            href="/gs/agenda/comissoes"
+            icon={<DollarSign size={20} />}
+            label="Comissões"
+            active={pathname.startsWith('/gs/agenda/comissoes')}
           />
           <NavItem
             href="/gs/pedidos"
@@ -274,6 +288,8 @@ export default function GSLayout({ children }: { children: React.ReactNode }) {
 
             <nav className="space-y-1">
               <MobileNavItem href="/gs" icon={<LayoutDashboard size={18} />} label="Dashboard" active={pathname === '/gs'} onClick={() => setSidebarOpen(false)} />
+              <MobileNavItem href="/gs/agenda" icon={<Calendar size={18} />} label="Agenda" active={pathname.startsWith('/gs/agenda') && !pathname.startsWith('/gs/agenda/comissoes')} onClick={() => setSidebarOpen(false)} />
+              <MobileNavItem href="/gs/agenda/comissoes" icon={<DollarSign size={18} />} label="Comissões" active={pathname.startsWith('/gs/agenda/comissoes')} onClick={() => setSidebarOpen(false)} />
               <MobileNavItem href="/gs/pedidos" icon={<FileText size={18} />} label="Pedidos" active={pathname.startsWith('/gs/pedidos')} onClick={() => setSidebarOpen(false)} />
               <MobileNavItem href="/gs/clientes" icon={<Users size={18} />} label="Clientes" active={pathname.startsWith('/gs/clientes')} onClick={() => setSidebarOpen(false)} />
               <MobileNavItem href="/gs/unidades" icon={<Building2 size={18} />} label="Unidades" active={pathname.startsWith('/gs/unidades')} onClick={() => setSidebarOpen(false)} />
