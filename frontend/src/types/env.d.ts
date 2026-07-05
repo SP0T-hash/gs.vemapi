@@ -20,5 +20,24 @@ declare namespace NodeJS {
     // ─── PKI / Segurança ─────────────────────────────────────────
     PKI_NONCE_SECRET: string;
     AUTH_JWT_SECRET: string;
+
+    // ─── GS Encryption ───────────────────────────────────────────
+    GS_ENCRYPTION_KEY?: string;
+    GS_ENCRYPTION_ALGORITHM?: string;
+
+    // ─── GS Security Middleware ───────────────────────────────────
+    GS_CORS_ORIGIN?: string;
+    GS_RATE_LIMIT_WINDOW?: string;
+    GS_RATE_LIMIT_MAX?: string;
+
+    // ─── Storage (S3/R2) ─────────────────────────────────────────
+    STORAGE_PROVIDER?: string;
+    STORAGE_ENDPOINT?: string;
+    STORAGE_REGION?: string;
+    STORAGE_ACCESS_KEY_ID?: string;
+    STORAGE_SECRET_ACCESS_KEY?: string;
+    STORAGE_BUCKET?: string;
+    STORAGE_PUBLIC_URL?: string;
+    ENCRYPT_UPLOADS?: string;
   }
 }
