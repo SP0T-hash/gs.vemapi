@@ -270,6 +270,106 @@ export async function getSignedUrl(key: string, expiresIn: number = 3600): Promi
   return s3GetSignedUrl(client as any, command, { expiresIn });
 }
 
+export function getFileCategory(mimeType: string): 'document' | 'image' | 'certificate' | 'xml' | 'unknown' {
+  if (mimeType === 'application/pdf') return 'document';
+  if (mimeType.startsWith('image/')) return 'image';
+  if (mimeType.includes('pkcs') || mimeType.includes('pem') || mimeType.includes('pkix') || mimeType.includes('cert')) return 'certificate';
+  if (mimeType === 'text/xml' || mimeType === 'application/xml') return 'xml';
+  return 'unknown';
+}
+
+export function formatFileSize(bytes: number): string {
+  if (bytes === 0) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const base = 1024;
+  const unitIndex = Math.min(Math.floor(Math.log(bytes) / Math.log(base)), units.length - 1);
+  const value = bytes / Math.pow(base, unitIndex);
+  return `${unitIndex === 0 ? value : value.toFixed(1)} ${units[unitIndex]}`;
+}
+
+export async function generateThumbnail(file: Buffer, mimeType: string): Promise<Buffer | null> {
+  if (!mimeType.startsWith('image/')) return null;
+
+  try {
+    if (typeof (globalThis as any).EdgeRuntime === 'string') return null;
+
+    const sharp = (await import('sharp')).default;
+    const thumbnail = await sharp(file)
+      .resize(200, 200, { fit: 'cover', position: 'centre' })
+      .jpeg({ quality: 70 })
+      .toBuffer();
+    return thumbnail;
+  } catch {
+    return null;
+  }
+}
+
+export async function getStorageStats(): Promise<{
+  totalFiles: number;
+  totalSize: number;
+  byBucket: Record<string, { files: number; size: number }>;
+  byType: Record<string, number>;
+}> {
+  const bucket = process.env.STORAGE_BUCKET;
+  if (!bucket) {
+    throw new Error('STORAGE_BUCKET não configurada.');
+  }
+
+  if (isEdgeRuntime()) {
+    throw new Error('Storage stats require Node.js runtime.');
+  }
+
+  const { S3Client, ListObjectsV2Command } = await import('@aws-sdk/client-s3');
+  const provider = process.env.STORAGE_PROVIDER || 's3';
+  const endpoint = process.env.STORAGE_ENDPOINT || '';
+
+  const client = new S3Client({
+    endpoint: endpoint || undefined,
+    region: process.env.STORAGE_REGION || 'us-east-1',
+    credentials: {
+      accessKeyId: process.env.STORAGE_ACCESS_KEY_ID!,
+      secretAccessKey: process.env.STORAGE_SECRET_ACCESS_KEY!,
+    },
+    forcePathStyle: provider === 'r2',
+  }) as any;
+
+  let totalFiles = 0;
+  let totalSize = 0;
+  const byType: Record<string, number> = {};
+  let continuationToken: string | undefined;
+
+  do {
+    const command = new ListObjectsV2Command({
+      Bucket: bucket,
+      MaxKeys: 1000,
+      ContinuationToken: continuationToken,
+    });
+
+    const response = await client.send(command);
+    const contents = response.Contents || [];
+
+    for (const obj of contents) {
+      totalFiles++;
+      totalSize += obj.Size || 0;
+
+      const key = obj.Key || '';
+      if (key.includes('/')) {
+        const type = key.split('/')[0].toUpperCase();
+        byType[type] = (byType[type] || 0) + 1;
+      }
+    }
+
+    continuationToken = response.NextContinuationToken;
+  } while (continuationToken);
+
+  return {
+    totalFiles,
+    totalSize,
+    byBucket: { [bucket]: { files: totalFiles, size: totalSize } },
+    byType,
+  };
+}
+
 export async function getFileBuffer(key: string): Promise<Buffer> {
   if (isEdgeRuntime()) {
     throw new Error('File downloads require Node.js runtime.');

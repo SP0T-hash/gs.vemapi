@@ -17,6 +17,7 @@ import {
   ShieldCheck,
   RefreshCw,
   AlertTriangle,
+  HardDrive,
 } from 'lucide-react';
 import { checkSession, logoutGS, getCurrentUser, type GS_UserSession } from '@/lib/gs/auth';
 import { USER_LEVEL_LABELS, USER_LEVEL_COLORS } from '@/types/gs/permissions';
@@ -130,6 +131,13 @@ export default function GSLayout({ children }: { children: React.ReactNode }) {
             icon={<RefreshCw size={20} />}
             label="Integrações"
             active={pathname.startsWith('/gs/integracoes')}
+            show={['AC_ADMIN', 'AR_ADMIN'].includes(user.nivel)}
+          />
+          <NavItem
+            href="/gs/storage"
+            icon={<HardDrive size={20} />}
+            label="Storage"
+            active={pathname.startsWith('/gs/storage') || pathname.startsWith('/gs/documentos') || pathname.startsWith('/gs/configuracoes/storage')}
             show={['AC_ADMIN', 'AR_ADMIN'].includes(user.nivel)}
           />
         </nav>
@@ -272,6 +280,9 @@ export default function GSLayout({ children }: { children: React.ReactNode }) {
               <MobileNavItem href="/gs/usuarios" icon={<UserCog size={18} />} label="Usuários" active={pathname.startsWith('/gs/usuarios')} onClick={() => setSidebarOpen(false)} />
               <MobileNavItem href="/gs/suporte" icon={<Headphones size={18} />} label="Suporte" active={pathname.startsWith('/gs/suporte')} onClick={() => setSidebarOpen(false)} />
               <MobileNavItem href="/gs/integracoes" icon={<RefreshCw size={18} />} label="Integrações" active={pathname.startsWith('/gs/integracoes')} onClick={() => setSidebarOpen(false)} />
+              {(user.nivel === 'AC_ADMIN' || user.nivel === 'AR_ADMIN') && (
+                <MobileNavItem href="/gs/storage" icon={<HardDrive size={18} />} label="Storage" active={pathname.startsWith('/gs/storage') || pathname.startsWith('/gs/documentos') || pathname.startsWith('/gs/configuracoes/storage')} onClick={() => setSidebarOpen(false)} />
+              )}
               <MobileNavItem href="/gs/configuracoes" icon={<Settings size={18} />} label="Config" active={pathname.startsWith('/gs/configuracoes')} onClick={() => setSidebarOpen(false)} />
             </nav>
 
