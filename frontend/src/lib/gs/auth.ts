@@ -6,7 +6,10 @@
  * - Refresh token automático
  * - Rate limit por IP
  * - Logs de auditoria
+ * - 2FA (TOTP) opcional
  */
+
+import type { TOTPSetup } from './totp';
 
 const GS_API_URL = process.env.NEXT_PUBLIC_GS_API_URL ?? '/api/gs';
 const TOKEN_COOKIE = 'gs_token';
@@ -14,6 +17,9 @@ const TOKEN_COOKIE = 'gs_token';
 // ─── Gerenciamento do token em memória ─────────────────────────────────────────
 let inMemoryToken: string | null = null;
 let currentUser: GS_UserSession | null = null;
+
+// Store tempToken for 2FA flow
+let pendingTempToken: string | null = null;
 
 export interface GS_UserSession {
   usuarioId: string;
@@ -34,6 +40,7 @@ function saveToken(token: string) {
 function clearToken() {
   inMemoryToken = null;
   currentUser = null;
+  pendingTempToken = null;
   document.cookie = `${TOKEN_COOKIE}=; path=/; max-age=0`;
 }
 
@@ -43,6 +50,14 @@ export function getToken(): string | null {
 
 export function getCurrentUser(): GS_UserSession | null {
   return currentUser;
+}
+
+export function getPendingTempToken(): string | null {
+  return pendingTempToken;
+}
+
+export function clearPendingTempToken(): void {
+  pendingTempToken = null;
 }
 
 // ─── API interna ───────────────────────────────────────────────────────────────
@@ -86,7 +101,7 @@ async function gsFetch<T>(
 
 // ─── Funções públicas ──────────────────────────────────────────────────────────
 
-export async function loginGS(email: string, password: string): Promise<GS_UserSession> {
+export async function loginGS(email: string, password: string): Promise<GS_UserSession | { requires2FA: boolean; tempToken: string; user: GS_UserSession }> {
   const response = await fetch(`${GS_API_URL}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -100,9 +115,101 @@ export async function loginGS(email: string, password: string): Promise<GS_UserS
   }
 
   const data = await response.json();
+
+  // 2FA required
+  if (data.requires2FA) {
+    pendingTempToken = data.tempToken;
+    return {
+      requires2FA: true,
+      tempToken: data.tempToken,
+      user: data.user,
+    };
+  }
+
   saveToken(data.token);
   currentUser = data.user;
   return data.user;
+}
+
+export async function verify2FACode(tempToken: string, code: string): Promise<GS_UserSession> {
+  const response = await fetch(`${GS_API_URL}/auth/2fa/verify`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tempToken, code }),
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Erro ao verificar 2FA' }));
+    throw new Error(error.error ?? 'Erro ao verificar 2FA');
+  }
+
+  const data = await response.json();
+  saveToken(data.token);
+  currentUser = data.user;
+  pendingTempToken = null;
+  return data.user;
+}
+
+export async function setup2FA(): Promise<{
+  secret: string;
+  otpauthUrl: string;
+  qrCodeSvg: string;
+  backupCodes: string[];
+}> {
+  const response = await fetch(`${GS_API_URL}/auth/2fa/setup`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(inMemoryToken ? { Authorization: `Bearer ${inMemoryToken}` } : {}),
+    },
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Erro ao obter setup 2FA' }));
+    throw new Error(error.error ?? 'Erro ao obter setup 2FA');
+  }
+
+  return response.json();
+}
+
+export async function verifyAndEnable2FA(token: string): Promise<{ success: boolean; backupCodes: string[] }> {
+  const response = await fetch(`${GS_API_URL}/auth/2fa/setup`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(inMemoryToken ? { Authorization: `Bearer ${inMemoryToken}` } : {}),
+    },
+    body: JSON.stringify({ token }),
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Erro ao ativar 2FA' }));
+    throw new Error(error.error ?? 'Erro ao ativar 2FA');
+  }
+
+  return response.json();
+}
+
+export async function disable2FA(token: string, password: string): Promise<{ success: boolean }> {
+  const response = await fetch(`${GS_API_URL}/auth/2fa/disable`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(inMemoryToken ? { Authorization: `Bearer ${inMemoryToken}` } : {}),
+    },
+    body: JSON.stringify({ token, password }),
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Erro ao desativar 2FA' }));
+    throw new Error(error.error ?? 'Erro ao desativar 2FA');
+  }
+
+  return response.json();
 }
 
 export async function logoutGS() {

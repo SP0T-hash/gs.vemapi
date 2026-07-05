@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { twoFactorStore } from '@/lib/gs/totp';
 
 const RATE_LIMIT_MAX = 5;
 const RATE_LIMIT_WINDOW_MS = 5 * 60 * 1000;
@@ -75,6 +76,39 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Credenciais inválidas' }, { status: 401 });
   }
 
+  // Check if user has 2FA enabled
+  const user2FA = twoFactorStore.get(user.usuarioId);
+
+  if (user2FA?.enabled) {
+    // Generate temp token for 2FA step
+    const { createTempSession } = await import('@/app/api/gs/auth/2fa/verify/route');
+    const tempToken = createTempSession({
+      usuarioId: user.usuarioId,
+      nome: user.nome,
+      email: user.email,
+      nivel: user.nivel,
+      arId: user.arId,
+      unidadeId: user.unidadeId,
+      arNome: user.arNome,
+      unidadeNome: undefined,
+    });
+
+    return NextResponse.json({
+      requires2FA: true,
+      tempToken,
+      user: {
+        usuarioId: user.usuarioId,
+        nome: user.nome,
+        email: user.email,
+        nivel: user.nivel,
+        arId: user.arId,
+        unidadeId: user.unidadeId,
+        arNome: user.arNome,
+      },
+    });
+  }
+
+  // No 2FA — issue full JWT
   const token = [
     btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' })),
     btoa(JSON.stringify({
